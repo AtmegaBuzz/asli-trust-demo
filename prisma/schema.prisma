@@ -1,0 +1,99 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // or "mysql", "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model GigWorker {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Basic Information
+  fullName    String
+  email       String   @unique
+  phoneNumber String   @unique
+  
+  // Government IDs
+  aadharNo    String?  @unique
+  panNo       String?  @unique
+  uanNumber   String?  @unique
+  votersId    String?  @unique
+  
+  // Education & Skills
+  educationCertificate String?
+  skills               String[] // Array of skills
+  
+  // Location Data
+  homeGeoLocation     String? // JSON string for lat/lng
+  workGeoLocation     String? // JSON string for lat/lng
+  city                String?
+  state               String?
+  country             String  @default("India")
+  
+  // Platform Information
+  platform            String?
+  serviceType         String?
+  workerId            String? @unique
+  
+  // Performance Metrics
+  rating              Float?   @default(0)
+  totalJobs           Int?     @default(0)
+  
+  // Verification Status
+  verificationLevel   String   @default("basic") // basic, verified, premium
+  backgroundCheckStatus String @default("pending") // pending, approved, rejected
+  
+  // Vehicle Information
+  licenseNumber       String?
+  vehicleType         String?
+  
+  // DID and Credential Information
+  profileId           String?  @unique // DID Profile ID
+  address             String?  @unique // Blockchain address
+  credentialId        String?  @unique // VC ID
+  registryId          String?  // Registry ID used
+  mnemonic            String?  // Encrypted mnemonic
+  publicKey           String?
+  
+  // Status
+  isActive            Boolean  @default(true)
+  joinDate            DateTime @default(now())
+  
+  // Batch Processing
+  batchId             String?  // For tracking bulk uploads
+  
+  @@map("gig_workers")
+}
+
+model Registry {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  
+  registryId  String   @unique // Registry ID from API
+  address     String   @unique // Registry address
+  title       String
+  description String?
+  schema      String   // JSON schema as string
+  isActive    Boolean  @default(true)
+  
+  @@map("registries")
+}
+
+model BatchUpload {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  
+  filename    String
+  totalRecords Int
+  processedRecords Int     @default(0)
+  failedRecords   Int      @default(0)
+  status      String       @default("processing") // processing, completed, failed
+  errors      String?      // JSON string of errors
+  
+  @@map("batch_uploads")
+}
