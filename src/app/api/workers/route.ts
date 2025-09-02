@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 const API_BASE_URL = 'http://20.193.138.24:5106/api/v1';
 const BEARER_TOKEN = 'fb5fbd27fecf0ad32398b0e6b2a60853653bdc0d0c576ec976960a14882e9328';
-const REGISTRY_ADDRESS = '76EU8Crvp9e7wZN77TcwAfKAKfvwYkLiU6Jd1cBQoKqzfJbxWn9GUB'; // Updated with your registry address
+const REGISTRY_ADDRESS = '3yfncBXKU7tcpmYFdoHqPsAf6HC9DPRSft59pi4W3fv1T6at'; // Updated with your registry address
 
 // Helper function to create DID profile
 async function createProfile(): Promise<ProfileResponse> {
@@ -188,6 +188,8 @@ export async function POST(request: NextRequest) {
     // Step 1: Create DID Profile
     console.log('Creating DID profile...');
     const profile = await createProfile();
+
+    console.log(profile,"====")
 
     // Step 2: Issue VC
     console.log('Issuing verifiable credential...');
