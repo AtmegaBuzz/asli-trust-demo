@@ -1,3 +1,5 @@
+import { Status } from "@prisma/client";
+
 // types/index.ts
 export interface GigWorker {
   id: string;
@@ -63,11 +65,6 @@ export interface CreateWorkerInput {
   fullName: string;
   email: string;
   phoneNumber: string;
-  aadharNo?: string;
-  panNo?: string;
-  uanNumber?: string;
-  votersId?: string;
-  educationCertificate?: string;
   skills: string[];
   homeGeoLocation?: string;
   workGeoLocation?: string;
@@ -166,3 +163,31 @@ export type VehicleType =
   | 'truck'
   | 'bicycle'
   | 'on_foot';
+
+
+export type DocumentType = 
+  | 'aadhar'
+  | 'pan' 
+  | 'uan'
+  | 'voters_id'
+  | 'driving_license'
+  | 'passport'
+  | 'education_certificate'
+  | 'income_certificate'
+  | 'caste_certificate'
+  | 'domicile_certificate'
+  | 'birth_certificate'
+  | 'other';
+
+export interface GovernmentCredential {
+  holderName: string;
+  documentType: DocumentType;
+  documentNumber: string;
+  issuingAuthority: string;
+  issueDate?: string;
+  expiryDate?: string | null;
+  verificationStatus: Status;
+  documentSpecificData?: Record<string, unknown>;
+  digitalSignature?: string;
+  isActive: boolean;
+}

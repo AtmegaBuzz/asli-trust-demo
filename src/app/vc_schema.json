@@ -1,0 +1,79 @@
+{
+  "title": "government_credential_registry",
+  "description": "Registry for digital copies of government-issued documents and credentials",
+  "type": "object",
+  "properties": {
+    "holderName": {
+      "type": "string",
+      "description": "Full name of the credential holder"
+    },
+    "documentType": {
+      "type": "string",
+      "enum": [
+        "aadhar",
+        "pan",
+        "uan",
+        "voters_id",
+        "driving_license",
+        "passport",
+        "education_certificate",
+        "income_certificate",
+        "caste_certificate",
+        "domicile_certificate",
+        "birth_certificate",
+        "other"
+      ],
+      "description": "Type of government document"
+    },
+    "documentNumber": {
+      "type": "string",
+      "description": "Official document number/ID"
+    },
+    "issuingAuthority": {
+      "type": "string",
+      "description": "Government authority that issued the document"
+    },
+    "issueDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when the document was issued"
+    },
+    "expiryDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Expiry date of the document (if applicable)"
+    },
+    "verificationStatus": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "verified",
+        "rejected",
+        "expired"
+      ],
+      "description": "Current verification status of the document"
+    },
+    "documentSpecificData": {
+      "type": "object",
+      "description": "JSON object containing document-specific fields",
+      "additionalProperties": true
+    },
+    "digitalSignature": {
+      "type": "string",
+      "description": "Digital signature or hash of the original document"
+    },
+    "isActive": {
+      "type": "boolean",
+      "description": "Whether the credential is currently active"
+    }
+  },
+  "required": [
+    "holderName",
+    "documentType",
+    "documentNumber",
+    "issuingAuthority",
+    "verificationStatus",
+    "isActive"
+  ],
+  "additionalProperties": false
+}
