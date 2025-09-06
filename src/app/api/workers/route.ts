@@ -24,7 +24,7 @@ async function createProfile(): Promise<ProfileResponse> {
 }
 
 // GET - Fetch all workers
-export async function GET(_: NextRequest) {
+export async function GET() {
   try {
     const workers = await prisma.gigWorker.findMany({
       orderBy: {

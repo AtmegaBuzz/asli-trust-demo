@@ -317,7 +317,7 @@ export default function GovernmentDocumentsSection({
         <div className="text-center py-8 text-gray-500">
           <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
           <p className="text-sm">No government documents added yet.</p>
-          <p className="text-xs mt-1">Click "Add Document" to get started.</p>
+          <p className="text-xs mt-1">Click &quot;Add Document&quot; to get started.</p>
         </div>
       )}
     </div>
