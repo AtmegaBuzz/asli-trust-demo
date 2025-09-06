@@ -3,7 +3,8 @@
 
 import { useState, FormEvent, ChangeEvent, useCallback } from 'react';
 import { Save, Loader2 } from 'lucide-react';
-import { CreateWorkerInput, ServiceType, VehicleType, GigWorkerFormInput } from '@/types';
+import { CreateWorkerInput, ServiceType, VehicleType, GigWorkerFormInput, GovernmentDocument } from '@/types';
+import GovernmentDocumentsSection from './GovernmentDocumentsSection';
 
 interface CreateWorkerFormProps {
   onSuccess: () => void;
@@ -31,6 +32,8 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
     homeGeoLocation: '',
     workGeoLocation: ''
   });
+
+  const [governmentDocuments, setGovernmentDocuments] = useState<GovernmentDocument[]>([]);
 
   const serviceTypes: ServiceType[] = [
     'ride_sharing',
@@ -67,6 +70,24 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
     }));
   }, []);
 
+  const handleGovernmentDocumentsChange = useCallback((documents: GovernmentDocument[]) => {
+    setGovernmentDocuments(documents);
+    
+    // Update legacy fields for backward compatibility
+    const aadhar = documents.find(doc => doc.documentType === 'aadhar');
+    const pan = documents.find(doc => doc.documentType === 'pan');
+    const uan = documents.find(doc => doc.documentType === 'uan');
+    const voters = documents.find(doc => doc.documentType === 'voters_id');
+    
+    setFormData(prev => ({
+      ...prev,
+      aadharNo: aadhar?.documentNumber || '',
+      panNo: pan?.documentNumber || '',
+      uanNumber: uan?.documentNumber || '',
+      votersId: voters?.documentNumber || ''
+    }));
+  }, []);
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setLoading(true);
@@ -78,6 +99,7 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
         skills: formData.skills.split(',').map(skill => skill.trim()).filter(Boolean)
       };
 
+      // Create the main worker first
       const response = await fetch('/api/workers', {
         method: 'POST',
         headers: {
@@ -87,8 +109,44 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
       });
 
       if (response.ok) {
-        await response.json();
-        alert('Worker created successfully with DID and VC!');
+        const result = await response.json();
+        
+        // If we have government documents, create credentials for each
+        if (governmentDocuments.length > 0) {
+          const credentialPromises = governmentDocuments.map(async (doc) => {
+            try {
+              const govCredResponse = await fetch('/api/government-credentials', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  holderName: doc.holderName,
+                  documentType: doc.documentType,
+                  customDocumentName: doc.customDocumentName,
+                  documentNumber: doc.documentNumber,
+                  issuingAuthority: doc.issuingAuthority,
+                  issueDate: doc.issueDate,
+                  profileAddress: result.profile.address, // Use the worker's DID address
+                  workerId: result.worker.id // Link to the worker
+                }),
+              });
+              
+              if (govCredResponse.ok) {
+                console.log(`Government credential created for ${doc.documentType}`);
+              } else {
+                console.error(`Failed to create credential for ${doc.documentType}`);
+              }
+            } catch (error) {
+              console.error(`Error creating credential for ${doc.documentType}:`, error);
+            }
+          });
+
+          // Wait for all government credentials to be processed
+          await Promise.allSettled(credentialPromises);
+        }
+
+        alert('Worker created successfully with DID and VC! Government documents processed.');
         
         // Reset form
         setFormData({
@@ -112,6 +170,7 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
           workGeoLocation: ''
         });
 
+        setGovernmentDocuments([]);
         onSuccess();
       } else {
         const error = await response.json();
@@ -132,7 +191,7 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
         <h4 className="text-md font-medium text-gray-900 mb-4">Personal Information</h4>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name *</label>
+            <label className="block text-sm font-medium text-gray-900">Full Name *</label>
             <input
               type="text"
               name="fullName"
@@ -168,111 +227,67 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
         </div>
       </div>
 
-      {/* Government IDs */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h4 className="text-md font-medium text-gray-900 mb-4">Government IDs</h4>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Aadhar Number</label>
-            <input
-              type="text"
-              name="aadharNo"
-              value={formData.aadharNo}
-              onChange={handleChange}
-              placeholder="1234-5678-9012"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">PAN Number</label>
-            <input
-              type="text"
-              name="panNo"
-              value={formData.panNo}
-              onChange={handleChange}
-              placeholder="ABCDE1234F"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">UAN Number</label>
-            <input
-              type="text"
-              name="uanNumber"
-              value={formData.uanNumber}
-              onChange={handleChange}
-              placeholder="123456789012"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Voter ID</label>
-            <input
-              type="text"
-              name="votersId"
-              value={formData.votersId}
-              onChange={handleChange}
-              placeholder="ABC1234567"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-            />
-          </div>
-        </div>
-      </div>
+      {/* Government Documents Section */}
+      <GovernmentDocumentsSection
+        documents={governmentDocuments}
+        onDocumentsChange={handleGovernmentDocumentsChange}
+        holderName={formData.fullName || 'Unknown'}
+      />
 
       {/* Location Information */}
       <div className="bg-gray-50 p-4 rounded-lg">
         <h4 className="text-md font-medium text-gray-900 mb-4">Location Information</h4>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700">City</label>
+            <label className="block text-sm font-medium text-gray-900">City</label>
             <input
               type="text"
               name="city"
               value={formData.city}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={inputClassName}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">State</label>
+            <label className="block text-sm font-medium text-gray-900">State</label>
             <input
               type="text"
               name="state"
               value={formData.state}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={inputClassName}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Country</label>
+            <label className="block text-sm font-medium text-gray-900">Country</label>
             <input
               type="text"
               name="country"
               value={formData.country}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={inputClassName}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Home Geo Location</label>
+            <label className="block text-sm font-medium text-gray-900">Home Geo Location</label>
             <input
               type="text"
               name="homeGeoLocation"
               value={formData.homeGeoLocation}
               onChange={handleChange}
               placeholder="19.0760,72.8777"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={inputClassName}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Work Geo Location</label>
+            <label className="block text-sm font-medium text-gray-900">Work Geo Location</label>
             <input
               type="text"
               name="workGeoLocation"
               value={formData.workGeoLocation}
               onChange={handleChange}
               placeholder="19.0760,72.8777"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={inputClassName}
             />
           </div>
         </div>
@@ -283,12 +298,12 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
         <h4 className="text-md font-medium text-gray-900 mb-4">Work Information</h4>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Platform</label>
+            <label className="block text-sm font-medium text-gray-900">Platform</label>
             <select
               name="platform"
               value={formData.platform}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={selectClassName}
             >
               <option value="">Select Platform</option>
               {platforms.map(platform => (
@@ -297,12 +312,12 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Service Type</label>
+            <label className="block text-sm font-medium text-gray-900">Service Type</label>
             <select
               name="serviceType"
               value={formData.serviceType}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={selectClassName}
             >
               <option value="">Select Service Type</option>
               {serviceTypes.map(type => (
@@ -313,23 +328,23 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">License Number</label>
+            <label className="block text-sm font-medium text-gray-900">License Number</label>
             <input
               type="text"
               name="licenseNumber"
               value={formData.licenseNumber}
               onChange={handleChange}
               placeholder="MH-DL-2020-0123456"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={inputClassName}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Vehicle Type</label>
+            <label className="block text-sm font-medium text-gray-900">Vehicle Type</label>
             <select
               name="vehicleType"
               value={formData.vehicleType}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={selectClassName}
             >
               <option value="">Select Vehicle</option>
               {vehicleTypes.map(type => (
@@ -340,25 +355,25 @@ export default function CreateWorkerForm({ onSuccess }: CreateWorkerFormProps) {
             </select>
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">Skills (comma separated)</label>
+            <label className="block text-sm font-medium text-gray-900">Skills (comma separated)</label>
             <input
               type="text"
               name="skills"
               value={formData.skills}
               onChange={handleChange}
               placeholder="navigation, customer service, hindi, english"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={inputClassName}
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">Education Certificate</label>
+            <label className="block text-sm font-medium text-gray-900">Education Certificate</label>
             <input
               type="text"
               name="educationCertificate"
               value={formData.educationCertificate}
               onChange={handleChange}
               placeholder="10th/12th/Graduate/Post Graduate"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+              className={inputClassName}
             />
           </div>
         </div>

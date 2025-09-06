@@ -191,3 +191,15 @@ export interface GovernmentCredential {
   digitalSignature?: string;
   isActive: boolean;
 }
+
+
+
+export interface GovernmentDocument {
+  id: string;
+  holderName: string;
+  documentType: DocumentType;
+  customDocumentName?: string; // For 'other' type
+  documentNumber: string;
+  issuingAuthority: string;
+  issueDate?: string;
+}

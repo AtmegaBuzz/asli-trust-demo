@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Eye, ExternalLink, Copy, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { GigWorker } from '@/types';
+import { useRouter } from 'next/navigation';
 
 interface WorkersTableProps {
   workers: GigWorker[];
@@ -11,6 +12,8 @@ interface WorkersTableProps {
 
 export default function WorkersTable({ workers, showActions }: WorkersTableProps) {
   const [selectedWorker, setSelectedWorker] = useState<GigWorker | null>(null);
+
+  const router = useRouter();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -42,7 +45,7 @@ export default function WorkersTable({ workers, showActions }: WorkersTableProps
   const checkVCStatus = async (credentialId: string) => {
     try {
       const response = await fetch(`http://20.193.138.24:5106/api/v1/cred/${credentialId}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         alert(`✅ VC Status: Active\n📄 Credential ID: ${credentialId}\n🏢 Issuer: ${data.vc?.issuer || 'N/A'}\n📅 Issued: ${data.vc?.issuanceDate || 'N/A'}\n📅 Expires: ${data.vc?.expirationDate || 'N/A'}`);
@@ -59,7 +62,7 @@ export default function WorkersTable({ workers, showActions }: WorkersTableProps
   const viewCredential = async (credentialId: string) => {
     try {
       const response = await fetch(`http://20.193.138.24:5106/api/v1/cred/${credentialId}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         // Create a formatted view of the credential
@@ -135,7 +138,7 @@ export default function WorkersTable({ workers, showActions }: WorkersTableProps
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {workers.map((worker) => (
-              <tr key={worker.id} className="hover:bg-gray-50">
+              <tr key={worker.id} className="hover:bg-gray-50" onClick={() => { router.push(`worker/${worker.workerId}`) }}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div>
@@ -239,7 +242,7 @@ export default function WorkersTable({ workers, showActions }: WorkersTableProps
                   ×
                 </button>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-3">Personal Information</h4>
@@ -286,7 +289,7 @@ export default function WorkersTable({ workers, showActions }: WorkersTableProps
                     <div className="text-xs font-mono bg-white p-2 rounded break-all text-gray-900">
                       {selectedWorker.profileId || 'Not created'}
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <strong className="text-gray-900">Blockchain Address:</strong>
                       {selectedWorker.address && (
@@ -301,7 +304,7 @@ export default function WorkersTable({ workers, showActions }: WorkersTableProps
                     <div className="text-xs font-mono bg-white p-2 rounded break-all text-gray-900">
                       {selectedWorker.address || 'Not created'}
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <strong className="text-gray-900">Credential ID:</strong>
                       {selectedWorker.credentialId && (
@@ -342,7 +345,7 @@ export default function WorkersTable({ workers, showActions }: WorkersTableProps
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end mt-6 space-x-3">
                 {selectedWorker.credentialId && (
                   <button
