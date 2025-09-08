@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { Shield, CheckCircle, Calendar, Building, User, Hash, Loader2, AlertCircle, QrCode } from 'lucide-react';
+import { Shield, CheckCircle, Building, User, Hash, Loader2, AlertCircle, QrCode } from 'lucide-react';
 
 interface CredentialResponse {
     credential: {
@@ -79,7 +79,7 @@ export default function CredentialVerificationPage({ params }: { params: Promise
         setLoading(true);
         fetchCredential();
         setLoading(false);
-    }, []);
+    }, [resolvedParams.id]);
 
     const getDocumentIcon = (documentType: string): string => {
         const icons: Record<string, string> = {
@@ -145,13 +145,13 @@ export default function CredentialVerificationPage({ params }: { params: Promise
                         )}
                         {data.fatherName && (
                             <div>
-                                <span className="text-sm font-medium text-gray-600">Father's Name</span>
+                                <span className="text-sm font-medium text-gray-600">Father&apos;s Name</span>
                                 <p className="text-gray-900">{data.fatherName}</p>
                             </div>
                         )}
                         {data.motherName && (
                             <div>
-                                <span className="text-sm font-medium text-gray-600">Mother's Name</span>
+                                <span className="text-sm font-medium text-gray-600">Mother&apos;s Name</span>
                                 <p className="text-gray-900">{data.motherName}</p>
                             </div>
                         )}

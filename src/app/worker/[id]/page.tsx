@@ -1,8 +1,8 @@
 // app/worker/[id]/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Star, Briefcase, Shield, Eye, X, Copy, Phone, Mail, Loader2 } from 'lucide-react';
+import { useState, useEffect, use } from 'react';
+import { ArrowLeft, MapPin, Shield, Eye, X, Copy, Phone, Mail, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -50,10 +50,8 @@ interface ApiResponse {
     credentials: CredentialData[];
 }
 
-export interface WorkerDetailPageProps {
-    params: {
-        id: string;
-    };
+interface WorkerDetailPageProps {
+    params: Promise<{ id: string }>
 }
 
 export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
@@ -63,11 +61,13 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
+    const resolvedParams = use(params);
+
     useEffect(() => {
         const fetchWorkerData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`http://localhost:3000/api/workers/${params.id}`);
+                const response = await fetch(`http://localhost:3000/api/workers/${resolvedParams.id}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch worker data');
@@ -82,10 +82,10 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
             }
         };
 
-        if (params.id) {
+        if (resolvedParams.id) {
             fetchWorkerData();
         }
-    }, [params.id]);
+    }, [resolvedParams.id]);
 
     const getDocumentIcon = (vcName: string): string => {
         const icons: Record<string, string> = {
@@ -163,8 +163,8 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                         <div><strong>Address:</strong> {data.address}</div>
                         <div><strong>Date of Birth:</strong> {data.dateOfBirth}</div>
                         <div><strong>Gender:</strong> {data.gender}</div>
-                        <div><strong>Father's Name:</strong> {data.fatherName}</div>
-                        <div><strong>Mother's Name:</strong> {data.motherName}</div>
+                        <div><strong>Father&apos;s Name:</strong> {data.fatherName}</div>
+                        <div><strong>Mother&apos;s Name:</strong> {data.motherName}</div>
                         <div><strong>Mobile:</strong> {data.mobileNumber}</div>
                         <div><strong>Email:</strong> {data.email}</div>
                         <div><strong>Pincode:</strong> {data.pincode}</div>
@@ -175,7 +175,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
             case 'PANCard':
                 return (
                     <div className="space-y-3">
-                        <div><strong>Father's Name:</strong> {data.fatherName}</div>
+                        <div><strong>Father&apos;s Name:</strong> {data.fatherName}</div>
                         <div><strong>Date of Birth:</strong> {data.dateOfBirth}</div>
                         <div><strong>Category:</strong> {data.category}</div>
                     </div>
