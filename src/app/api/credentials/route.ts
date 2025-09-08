@@ -29,8 +29,6 @@ async function issueCredential(workerData: GovernmentCredential, documentSpecifi
         address: profileAddress
     };
 
-    console.log('Issuing VC with payload:', JSON.stringify(vcPayload, null, 2));
-
     const response = await fetch(`${API_BASE_URL}/cred`, {
         method: 'POST',
         headers: {
