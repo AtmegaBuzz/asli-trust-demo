@@ -67,7 +67,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
         const fetchWorkerData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`http://localhost:3000/api/workers/${resolvedParams.id}`);
+                const response = await fetch(`/api/workers/${resolvedParams.id}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to fetch worker data');
