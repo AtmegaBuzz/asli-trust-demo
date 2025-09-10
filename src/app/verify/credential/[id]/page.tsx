@@ -79,7 +79,7 @@ export default function CredentialVerificationPage({ params }: { params: Promise
         setLoading(true);
         fetchCredential();
         setLoading(false);
-    }, [resolvedParams.id]);
+    }, [resolvedParams.id, fetchCredential]);
 
     const getDocumentIcon = (documentType: string): string => {
         const icons: Record<string, string> = {

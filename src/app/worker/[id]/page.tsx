@@ -635,7 +635,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                                 <div className="text-center py-8 text-gray-500">
                                     <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                                     <p className="text-sm">No government credentials found for this worker.</p>
-                                    <p className="text-xs mt-1">Click "Issue New Credential" to add credentials.</p>
+                                    <p className="text-xs mt-1">Click &quot;Issue New Credential&quot; to add credentials.</p>
                                 </div>
                             )}
                         </div>
