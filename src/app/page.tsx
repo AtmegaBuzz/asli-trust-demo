@@ -30,7 +30,7 @@ export default function Dashboard() {
 
       const workersData: GigWorker[] = await workersRes.json();
       const statsData: Stats = await statsRes.json();
-      console.log(workersData, "------")
+
       setWorkers(workersData);
       setStats(statsData);
     } catch (error) {

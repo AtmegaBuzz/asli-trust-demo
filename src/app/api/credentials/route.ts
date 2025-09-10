@@ -9,6 +9,7 @@ const prisma = new PrismaClient();
 
 const API_BASE_URL = process.env.API_BASE_URL;
 const BEARER_TOKEN = process.env.BEARER_TOKEN;
+const REGISTRY_ADDRESS = process.env.REGISTRY_ADDRESS;
 
 // Helper function to issue VC
 async function issueCredential(workerData: GovernmentCredential, documentSpecificData: any, profileAddress: string): Promise<CredentialResponse> {
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const issuedCredential = await issueCredential(credentialData, credentialData.documentSpecificData, worker.address!);
+        const issuedCredential = await issueCredential(credentialData, credentialData.documentSpecificData, REGISTRY_ADDRESS!);
 
         const credential = await prisma.vC.create({
             data: {

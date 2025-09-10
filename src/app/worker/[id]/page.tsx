@@ -2,10 +2,11 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { ArrowLeft, MapPin, Shield, Eye, X, Copy, Phone, Mail, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Shield, Eye, X, Copy, Phone, Mail, Loader2, Plus, Save } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { QRCodeCanvas } from "qrcode.react";
-
+import GovernmentDocumentsSection from '@/components/GovernmentDocumentsSection';
+import { GovernmentDocument } from '@/types';
 
 interface WorkerData {
     id: string;
@@ -57,6 +58,9 @@ interface WorkerDetailPageProps {
 export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
     const [workerData, setWorkerData] = useState<ApiResponse | null>(null);
     const [selectedCredential, setSelectedCredential] = useState<any>(null);
+    const [showIssueModal, setShowIssueModal] = useState(false);
+    const [governmentDocuments, setGovernmentDocuments] = useState<any[]>([]);
+    const [issuingCredential, setIssuingCredential] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
@@ -86,6 +90,147 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
             fetchWorkerData();
         }
     }, [resolvedParams.id]);
+
+    const handleGovernmentDocumentsChange = (documents: any[]) => {
+        setGovernmentDocuments(documents);
+    };
+
+    const handleIssueCredentials = async () => {
+        if (!workerData || governmentDocuments.length === 0) return;
+
+        setIssuingCredential(true);
+        
+        try {
+            const credentialPromises = governmentDocuments.map(async (doc) => {
+                try {
+                    // Create document specific data based on document type
+                    const documentSpecificData = createDocumentSpecificData(doc);
+                    
+                    const credentialPayload = {
+                        worker_data: {
+                            holderName: doc.holderName,
+                            documentType: doc.documentType,
+                            documentNumber: doc.documentNumber,
+                            issuingAuthority: doc.issuingAuthority,
+                            issueDate: doc.issueDate,
+                            expiryDate: doc.expiryDate || null,
+                            verificationStatus: 'PENDING' as const,
+                            documentSpecificData: documentSpecificData,
+                            isActive: true
+                        },
+                        worker_id: workerData.worker.workerId // Use workerId instead of id
+                    };
+
+                    const govCredResponse = await fetch('/api/credentials', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(credentialPayload),
+                    });
+                    
+                    if (govCredResponse.ok) {
+                        console.log(`Government credential created for ${doc.documentType}`);
+                        return true;
+                    } else {
+                        const errorData = await govCredResponse.json();
+                        console.error(`Failed to create credential for ${doc.documentType}:`, errorData);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error(`Error creating credential for ${doc.documentType}:`, error);
+                    return false;
+                }
+            });
+
+            const results = await Promise.allSettled(credentialPromises);
+            const successCount = results.filter(result => 
+                result.status === 'fulfilled' && result.value === true
+            ).length;
+
+            alert(`Successfully issued ${successCount} of ${governmentDocuments.length} credentials!`);
+            
+            // Reset modal state
+            setShowIssueModal(false);
+            setGovernmentDocuments([]);
+            
+            // Refresh worker data to show new credentials
+            const response = await fetch(`/api/workers/${resolvedParams.id}`);
+            if (response.ok) {
+                const data: ApiResponse = await response.json();
+                setWorkerData(data);
+            }
+        } catch (error) {
+            console.error('Error issuing credentials:', error);
+            alert('Error issuing credentials');
+        } finally {
+            setIssuingCredential(false);
+        }
+    };
+
+    // Helper function to create document-specific data based on document type
+    const createDocumentSpecificData = (doc: any): Record<string, any> => {
+        const baseData = {
+            documentNumber: doc.documentNumber,
+            issuingAuthority: doc.issuingAuthority,
+            issueDate: doc.issueDate,
+            holderName: doc.holderName
+        };
+
+        // Add document-specific fields based on type
+        switch (doc.documentType) {
+            case 'aadhar':
+                return {
+                    ...baseData,
+                    address: doc.address || '',
+                    dateOfBirth: doc.dateOfBirth || '',
+                    gender: doc.gender || '',
+                    fatherName: doc.fatherName || '',
+                    motherName: doc.motherName || '',
+                    mobileNumber: doc.mobileNumber || '',
+                    email: doc.email || '',
+                    pincode: doc.pincode || '',
+                    district: doc.district || '',
+                    enrollmentNumber: doc.enrollmentNumber || ''
+                };
+            case 'pan':
+                return {
+                    ...baseData,
+                    fatherName: doc.fatherName || '',
+                    dateOfBirth: doc.dateOfBirth || '',
+                    category: doc.category || 'Individual'
+                };
+            case 'driving_license':
+                return {
+                    ...baseData,
+                    vehicleTypes: doc.vehicleTypes || [],
+                    address: doc.address || '',
+                    bloodGroup: doc.bloodGroup || '',
+                    dateOfBirth: doc.dateOfBirth || '',
+                    emergencyContact: doc.emergencyContact || ''
+                };
+            case 'uan':
+                return {
+                    ...baseData,
+                    employerName: doc.employerName || '',
+                    dateOfJoining: doc.dateOfJoining || '',
+                    designation: doc.designation || '',
+                    pfNumber: doc.pfNumber || ''
+                };
+            case 'education_certificate':
+                return {
+                    ...baseData,
+                    qualification: doc.qualification || '',
+                    passingYear: doc.passingYear || '',
+                    percentage: doc.percentage || '',
+                    grade: doc.grade || '',
+                    instituteName: doc.instituteName || '',
+                    subjects: doc.subjects || []
+                };
+            default:
+                return baseData;
+        }
+    };
 
     const getDocumentIcon = (vcName: string): string => {
         const icons: Record<string, string> = {
@@ -412,11 +557,20 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                         <div className="bg-white rounded-lg shadow p-6">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-lg font-medium text-gray-900">Government Credentials</h3>
-                                <div className="flex items-center space-x-2">
-                                    <Shield className="h-5 w-5 text-green-500" />
-                                    <span className="text-sm text-green-600">
-                                        {credentials.filter(c => c.status === 'VERIFIED').length} Verified, {credentials.length} Total
-                                    </span>
+                                <div className="flex items-center space-x-4">
+                                    <div className="flex items-center space-x-2">
+                                        <Shield className="h-5 w-5 text-green-500" />
+                                        <span className="text-sm text-green-600">
+                                            {credentials.filter(c => c.status === 'VERIFIED').length} Verified, {credentials.length} Total
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowIssueModal(true)}
+                                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2 text-sm"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        <span>Issue New Credential</span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -481,12 +635,68 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                                 <div className="text-center py-8 text-gray-500">
                                     <Shield className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                                     <p className="text-sm">No government credentials found for this worker.</p>
+                                    <p className="text-xs mt-1">Click "Issue New Credential" to add credentials.</p>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Issue New Credential Modal */}
+            {showIssueModal && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div className="relative top-10 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 className="text-lg font-medium text-gray-900">Issue New Credential</h3>
+                                <p className="text-sm text-gray-600">Add government documents for {worker.fullName}</p>
+                            </div>
+                            <button
+                                onClick={() => setShowIssueModal(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="h-6 w-6" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            <GovernmentDocumentsSection
+                                documents={governmentDocuments}
+                                onDocumentsChange={handleGovernmentDocumentsChange}
+                                holderName={worker.fullName}
+                            />
+
+                            <div className="flex justify-end space-x-3 pt-4 border-t">
+                                <button
+                                    onClick={() => setShowIssueModal(false)}
+                                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+                                    disabled={issuingCredential}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleIssueCredentials}
+                                    disabled={issuingCredential || governmentDocuments.length === 0}
+                                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                                >
+                                    {issuingCredential ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            <span>Issuing...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="h-4 w-4" />
+                                            <span>Issue Credentials</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Credential Detail Modal */}
             {selectedCredential && (
@@ -578,13 +788,16 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                                     </div>
                                     <div className='text-black'>
                                         <span className="text-sm font-medium text-gray-700">Credential QR:</span>
-                                        <div className="flex items-center justify-between">
-                                            <QRCodeCanvas className='text-xs font-mono bg-white p-2 rounded break-all' value={`${window.location.origin}/verify/credential/${selectedCredential.credId}`} size={200} />
+                                        <div className="flex items-center justify-center mt-2">
+                                            <QRCodeCanvas 
+                                                value={`${window.location.origin}/verify/credential/${selectedCredential.credId}`} 
+                                                size={200} 
+                                                className="border rounded"
+                                            />
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
                         </div>
 
                         <div className="flex justify-end mt-6">
