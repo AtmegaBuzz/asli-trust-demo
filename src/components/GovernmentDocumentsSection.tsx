@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Plus, Edit, Save, X, FileText, Trash2 } from 'lucide-react';
 import { DocumentType, GovernmentDocument } from '@/types';
+import { uploadFileToAPI } from '@/utils/upload';
 
 
 export interface GovernmentDocumentsSectionProps {
@@ -12,10 +13,10 @@ export interface GovernmentDocumentsSectionProps {
   holderName: string; // Pre-fill from main form
 }
 
-export default function GovernmentDocumentsSection({ 
-  documents, 
-  onDocumentsChange, 
-  holderName 
+export default function GovernmentDocumentsSection({
+  documents,
+  onDocumentsChange,
+  holderName
 }: GovernmentDocumentsSectionProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -24,8 +25,13 @@ export default function GovernmentDocumentsSection({
     documentType: 'aadhar',
     documentNumber: '',
     issuingAuthority: '',
-    issueDate: ''
+    issueDate: '',
+    fileUrl: ''
   });
+  const [uploading, setUploading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalDocUrl, setModalDocUrl] = useState<string | null>(null);
+
 
   const documentTypes: { value: DocumentType; label: string }[] = [
     { value: 'aadhar', label: 'Aadhar Card' },
@@ -50,7 +56,8 @@ export default function GovernmentDocumentsSection({
       documentType: 'aadhar',
       documentNumber: '',
       issuingAuthority: '',
-      issueDate: ''
+      issueDate: '',
+      fileUrl: ''
     });
   };
 
@@ -67,7 +74,8 @@ export default function GovernmentDocumentsSection({
       customDocumentName: doc.customDocumentName,
       documentNumber: doc.documentNumber,
       issuingAuthority: doc.issuingAuthority,
-      issueDate: doc.issueDate
+      issueDate: doc.issueDate,
+      fileUrl: doc.fileUrl
     });
     setEditingId(doc.id);
     setShowAddForm(true);
@@ -93,7 +101,7 @@ export default function GovernmentDocumentsSection({
     let updatedDocuments: GovernmentDocument[];
     if (editingId) {
       // Update existing document
-      updatedDocuments = documents.map(doc => 
+      updatedDocuments = documents.map(doc =>
         doc.id === editingId ? newDocument : doc
       );
     } else {
@@ -179,6 +187,30 @@ export default function GovernmentDocumentsSection({
                       <div><strong>Issue Date:</strong> {doc.issueDate}</div>
                     )}
                   </div>
+                  {doc.fileUrl && (
+                    <div className="mt-2">
+                      {doc.fileUrl.endsWith('.pdf') ? (
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 text-xs underline"
+                        >
+                          View PDF
+                        </a>
+                      ) : (
+                        <img
+                          src={doc.fileUrl}
+                          alt={doc.documentNumber}
+                          className="mt-2 max-h-40 rounded border border-gray-200 cursor-pointer"
+                          onClick={() => {
+                            setModalDocUrl(doc.fileUrl);
+                            setShowModal(true);
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex space-x-1 ml-4">
                   <button
@@ -227,7 +259,7 @@ export default function GovernmentDocumentsSection({
               <select
                 value={formData.documentType}
                 onChange={(e) => setFormData({
-                  ...formData, 
+                  ...formData,
                   documentType: e.target.value as DocumentType,
                   customDocumentName: e.target.value === 'other' ? formData.customDocumentName : undefined
                 })}
@@ -248,7 +280,7 @@ export default function GovernmentDocumentsSection({
                 <input
                   type="text"
                   value={formData.customDocumentName || ''}
-                  onChange={(e) => setFormData({...formData, customDocumentName: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, customDocumentName: e.target.value })}
                   placeholder="Enter document name"
                   className={inputClassName}
                 />
@@ -261,7 +293,7 @@ export default function GovernmentDocumentsSection({
               <input
                 type="text"
                 value={formData.documentNumber}
-                onChange={(e) => setFormData({...formData, documentNumber: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, documentNumber: e.target.value })}
                 placeholder="Enter document number"
                 className={inputClassName}
               />
@@ -273,7 +305,7 @@ export default function GovernmentDocumentsSection({
               <input
                 type="text"
                 value={formData.issuingAuthority}
-                onChange={(e) => setFormData({...formData, issuingAuthority: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, issuingAuthority: e.target.value })}
                 placeholder="Enter issuing authority"
                 className={inputClassName}
               />
@@ -285,8 +317,24 @@ export default function GovernmentDocumentsSection({
               <input
                 type="date"
                 value={formData.issueDate}
-                onChange={(e) => setFormData({...formData, issueDate: e.target.value})}
+                onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })}
                 className={inputClassName}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Issue Date</label>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={async (e) => {
+                  setUploading(true);
+                  const selectedFile = e.target.files?.[0];
+                  const uploadResponse = await uploadFileToAPI(selectedFile!);
+                  setFormData({ ...formData, fileUrl: uploadResponse.url });
+                  setUploading(false);
+                }}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
               />
             </div>
           </div>
@@ -312,6 +360,24 @@ export default function GovernmentDocumentsSection({
         </div>
       )}
 
+      {showModal && modalDocUrl && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div className="relative bg-white p-4 rounded-lg max-w-3xl w-full">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-2 right-2 text-gray-600 hover:text-gray-900"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <img
+              src={modalDocUrl}
+              alt="Full Document"
+              className="max-h-[80vh] mx-auto rounded-lg"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Empty State */}
       {documents.length === 0 && !showAddForm && (
         <div className="text-center py-8 text-gray-500">
@@ -320,6 +386,40 @@ export default function GovernmentDocumentsSection({
           <p className="text-xs mt-1">Click &quot;Add Document&quot; to get started.</p>
         </div>
       )}
+
+      {uploading && (
+        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
+          <div className="flex flex-col items-center space-y-3 bg-white p-6 rounded-lg shadow-lg">
+            {/* Spinner */}
+            <svg
+              className="animate-spin h-8 w-8 text-blue-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              ></path>
+            </svg>
+            {/* Text */}
+            <p className="text-gray-700 text-sm font-medium">
+              Uploading file, please wait...
+            </p>
+          </div>
+        </div>
+      )}
+
     </div>
+
   );
 }

@@ -91,7 +91,8 @@ export async function POST(request: NextRequest) {
                 credId: issuedCredential.credId,
                 vcName: credentialData.documentType,
                 vc: JSON.stringify(issuedCredential.vc),
-                gigWorkerId: worker.id
+                gigWorkerId: worker.id,
+                fileUrl: credentialData.fileUrl,
             }
         })
 

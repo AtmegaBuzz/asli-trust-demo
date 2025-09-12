@@ -43,11 +43,11 @@ model GigWorker {
   vehicleType   String?
 
   // DID and Credential Information
-  profileId    String? @unique // DID Profile ID
-  address      String? @unique // Blockchain address
-  registryId   String? // Registry ID used
-  mnemonic     String? // Encrypted mnemonic
-  publicKey    String?
+  profileId  String? @unique // DID Profile ID
+  address    String? @unique // Blockchain address
+  registryId String? // Registry ID used
+  mnemonic   String? // Encrypted mnemonic
+  publicKey  String?
 
   // Status
   isActive Boolean  @default(true)
@@ -68,8 +68,9 @@ model VC {
 
   status Status @default(PENDING)
 
-  credId String
-  vcName String @unique
+  credId  String
+  vcName  String  @unique
+  fileUrl String?
 
   vc String
 

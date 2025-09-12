@@ -6,7 +6,6 @@ import { ArrowLeft, MapPin, Shield, Eye, X, Copy, Phone, Mail, Loader2, Plus, Sa
 import { useRouter } from 'next/navigation';
 import { QRCodeCanvas } from "qrcode.react";
 import GovernmentDocumentsSection from '@/components/GovernmentDocumentsSection';
-import { GovernmentDocument } from '@/types';
 
 interface WorkerData {
     id: string;
@@ -44,6 +43,7 @@ interface CredentialData {
     gigWorkerId: string;
     createdAt: string;
     updatedAt: string;
+    fileUrl: string;
 }
 
 interface ApiResponse {
@@ -64,6 +64,9 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+    const [modalDocUrl, setModalDocUrl] = useState<string | null>(null);
+    const [showModal, setShowModal] = useState(false);
+
 
     const resolvedParams = use(params);
 
@@ -99,13 +102,13 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
         if (!workerData || governmentDocuments.length === 0) return;
 
         setIssuingCredential(true);
-        
+
         try {
             const credentialPromises = governmentDocuments.map(async (doc) => {
                 try {
                     // Create document specific data based on document type
                     const documentSpecificData = createDocumentSpecificData(doc);
-                    
+
                     const credentialPayload = {
                         worker_data: {
                             holderName: doc.holderName,
@@ -116,7 +119,8 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                             expiryDate: doc.expiryDate || null,
                             verificationStatus: 'PENDING' as const,
                             documentSpecificData: documentSpecificData,
-                            isActive: true
+                            isActive: true,
+                            fileUrl: doc.fileUrl
                         },
                         worker_id: workerData.worker.workerId // Use workerId instead of id
                     };
@@ -128,7 +132,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                         },
                         body: JSON.stringify(credentialPayload),
                     });
-                    
+
                     if (govCredResponse.ok) {
                         console.log(`Government credential created for ${doc.documentType}`);
                         return true;
@@ -144,16 +148,16 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
             });
 
             const results = await Promise.allSettled(credentialPromises);
-            const successCount = results.filter(result => 
+            const successCount = results.filter(result =>
                 result.status === 'fulfilled' && result.value === true
             ).length;
 
             alert(`Successfully issued ${successCount} of ${governmentDocuments.length} credentials!`);
-            
+
             // Reset modal state
             setShowIssueModal(false);
             setGovernmentDocuments([]);
-            
+
             // Refresh worker data to show new credentials
             const response = await fetch(`/api/workers/${resolvedParams.id}`);
             if (response.ok) {
@@ -191,14 +195,16 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                     email: doc.email || '',
                     pincode: doc.pincode || '',
                     district: doc.district || '',
-                    enrollmentNumber: doc.enrollmentNumber || ''
+                    enrollmentNumber: doc.enrollmentNumber || '',
+                    fileUrl: doc.fileUrl || ''
                 };
             case 'pan':
                 return {
                     ...baseData,
                     fatherName: doc.fatherName || '',
                     dateOfBirth: doc.dateOfBirth || '',
-                    category: doc.category || 'Individual'
+                    category: doc.category || 'Individual',
+                    fileUrl: doc.fileUrl || ''
                 };
             case 'driving_license':
                 return {
@@ -207,7 +213,8 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                     address: doc.address || '',
                     bloodGroup: doc.bloodGroup || '',
                     dateOfBirth: doc.dateOfBirth || '',
-                    emergencyContact: doc.emergencyContact || ''
+                    emergencyContact: doc.emergencyContact || '',
+                    fileUrl: doc.fileUrl || ''
                 };
             case 'uan':
                 return {
@@ -215,7 +222,8 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                     employerName: doc.employerName || '',
                     dateOfJoining: doc.dateOfJoining || '',
                     designation: doc.designation || '',
-                    pfNumber: doc.pfNumber || ''
+                    pfNumber: doc.pfNumber || '',
+                    fileUrl: doc.fileUrl || ''
                 };
             case 'education_certificate':
                 return {
@@ -225,7 +233,8 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                     percentage: doc.percentage || '',
                     grade: doc.grade || '',
                     instituteName: doc.instituteName || '',
-                    subjects: doc.subjects || []
+                    subjects: doc.subjects || [],
+                    fileUrl: doc.fileUrl || ''
                 };
             default:
                 return baseData;
@@ -298,8 +307,39 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
         if (!vcSubject || !vcSubject.documentSpecificData) {
             return <div>No specific details available</div>;
         }
-
+        
         const data = vcSubject.documentSpecificData;
+
+        let file: React.ReactNode = null;
+        if (credential.fileUrl) {
+            file = (
+                <div className="mt-2">
+                    {credential.fileUrl.endsWith(".pdf") ? (
+                        <a
+                            href={credential.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 text-xs underline"
+                        >
+                            View PDF
+                        </a>
+                    ) : (
+                        <img
+                            src={credential.fileUrl}
+                            alt={data.documentNumber || "document"}
+                            className="mt-2 max-h-40 rounded border border-gray-200 cursor-pointer"
+                            onClick={() => {
+                                setModalDocUrl(credential.fileUrl);
+                                setShowModal(true);
+                            }}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        console.log(credential.fileUrl,"-----")
+
 
         switch (credential.vcName) {
             case 'AadhaarCard':
@@ -315,6 +355,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                         <div><strong>Pincode:</strong> {data.pincode}</div>
                         <div><strong>District:</strong> {data.district}</div>
                         <div><strong>Enrollment Number:</strong> {data.enrollmentNumber}</div>
+                        {file}
                     </div>
                 );
             case 'PANCard':
@@ -323,6 +364,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                         <div><strong>Father&apos;s Name:</strong> {data.fatherName}</div>
                         <div><strong>Date of Birth:</strong> {data.dateOfBirth}</div>
                         <div><strong>Category:</strong> {data.category}</div>
+                        {file}
                     </div>
                 );
             case 'DrivingLicense':
@@ -333,6 +375,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                         <div><strong>Blood Group:</strong> {data.bloodGroup}</div>
                         <div><strong>Date of Birth:</strong> {data.dateOfBirth}</div>
                         <div><strong>Emergency Contact:</strong> {data.emergencyContact}</div>
+                        {file}
                     </div>
                 );
             case 'UAN':
@@ -342,6 +385,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                         <div><strong>Date of Joining:</strong> {data.dateOfJoining}</div>
                         <div><strong>Designation:</strong> {data.designation}</div>
                         <div><strong>PF Number:</strong> {data.pfNumber}</div>
+                        {file}
                     </div>
                 );
             case 'EducationCertificate':
@@ -353,6 +397,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                         <div><strong>Grade:</strong> {data.grade}</div>
                         <div><strong>Institution:</strong> {data.instituteName}</div>
                         <div><strong>Subjects:</strong> {data.subjects?.join(', ')}</div>
+                        {file}
                     </div>
                 );
             default:
@@ -365,6 +410,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                                 }
                             </div>
                         ))}
+                        {file}
                     </div>
                 );
         }
@@ -789,9 +835,9 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                                     <div className='text-black'>
                                         <span className="text-sm font-medium text-gray-700">Credential QR:</span>
                                         <div className="flex items-center justify-center mt-2">
-                                            <QRCodeCanvas 
-                                                value={`${window.location.origin}/verify/credential/${selectedCredential.credId}`} 
-                                                size={200} 
+                                            <QRCodeCanvas
+                                                value={`${window.location.origin}/verify/credential/${selectedCredential.credId}`}
+                                                size={200}
                                                 className="border rounded"
                                             />
                                         </div>
@@ -808,6 +854,24 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                                 Close
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showModal && modalDocUrl && (
+                <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                    <div className="relative bg-white p-4 rounded-lg max-w-3xl w-full">
+                        <button
+                            onClick={() => setShowModal(false)}
+                            className="absolute top-2 right-2 text-gray-600 hover:text-gray-900"
+                        >
+                            <X className="h-6 w-6" />
+                        </button>
+                        <img
+                            src={modalDocUrl}
+                            alt="Full Document"
+                            className="max-h-[80vh] mx-auto rounded-lg"
+                        />
                     </div>
                 </div>
             )}

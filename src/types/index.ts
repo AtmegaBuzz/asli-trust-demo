@@ -190,6 +190,7 @@ export interface GovernmentCredential {
   documentSpecificData?: Record<string, unknown>;
   digitalSignature?: string;
   isActive: boolean;
+  fileUrl: string;
 }
 
 
@@ -202,4 +203,5 @@ export interface GovernmentDocument {
   documentNumber: string;
   issuingAuthority: string;
   issueDate?: string;
+  fileUrl: string;
 }
