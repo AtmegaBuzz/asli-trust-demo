@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { Shield, CheckCircle, Building, User, Hash, Loader2, AlertCircle, QrCode } from 'lucide-react';
+import { Shield, CheckCircle, Building, User, Hash, Loader2, AlertCircle, QrCode, Mail, X } from 'lucide-react';
 
 interface CredentialResponse {
     credential: {
@@ -51,12 +51,14 @@ export default function CredentialVerificationPage({ params }: { params: Promise
     const [credential, setCredential] = useState<CredentialResponse | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [email, setEmail] = useState('');
+    const [sending, setSending] = useState(false);
+    const [emailSent, setEmailSent] = useState(false);
 
     const resolvedParams = use(params);
 
-
     const fetchCredential = async () => {
-
         try {
             const resp = await fetch(`/api/credentials/${resolvedParams.id}`);
 
@@ -71,15 +73,50 @@ export default function CredentialVerificationPage({ params }: { params: Promise
         } catch (e: any) {
             console.log("error fetching credential: ", e)
         }
-
     }
+
+    const sendCredentialToEmail = async () => {
+        if (!email.trim()) return;
+
+        setSending(true);
+        try {
+            const response = await fetch(`/api/credentials/${resolvedParams.id}/send-email`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email.trim() })
+            });
+
+            if (response.ok) {
+                setEmailSent(true);
+                setTimeout(() => {
+                    setShowEmailModal(false);
+                    setEmailSent(false);
+                    setEmail('');
+                }, 2000);
+            } else {
+                throw new Error('Failed to send email');
+            }
+        } catch (error) {
+            console.error('Error sending email:', error);
+            // You could add error handling here
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const handleEmailSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        sendCredentialToEmail();
+    };
 
     // Mock data - replace with actual API call
     useEffect(() => {
         setLoading(true);
         fetchCredential();
         setLoading(false);
-    }, [resolvedParams.id, fetchCredential]);
+    }, []);
 
     const getDocumentIcon = (documentType: string): string => {
         const icons: Record<string, string> = {
@@ -249,13 +286,24 @@ export default function CredentialVerificationPage({ params }: { params: Promise
             {/* Header with Verification Status */}
             <div className="bg-white shadow-sm border-b border-green-200">
                 <div className="max-w-4xl mx-auto px-4 py-6">
-                    <div className="flex items-center justify-center space-x-3">
-                        <CheckCircle className="h-8 w-8 text-green-600" />
-                        <div className="text-center">
-                            <h1 className="text-2xl font-bold text-gray-900">Verified Credential</h1>
-                            <p className="text-sm text-green-600 font-medium">This document has been cryptographically verified</p>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                            <CheckCircle className="h-8 w-8 text-green-600" />
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-900">Verified Credential</h1>
+                                <p className="text-sm text-green-600 font-medium">This document has been cryptographically verified</p>
+                            </div>
+                            <Shield className="h-8 w-8 text-green-600" />
                         </div>
-                        <Shield className="h-8 w-8 text-green-600" />
+                        
+                        {/* Get Credential Button */}
+                        <button
+                            onClick={() => setShowEmailModal(true)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                        >
+                            <Mail className="h-4 w-4" />
+                            <span>Get Credential</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -288,7 +336,7 @@ export default function CredentialVerificationPage({ params }: { params: Promise
                         </div>
                     </div>
 
-                    {/* Main Content */}
+                    {/* Rest of the existing content... */}
                     <div className="p-8">
                         {/* Holder Information */}
                         <div className="mb-8">
@@ -400,6 +448,78 @@ export default function CredentialVerificationPage({ params }: { params: Promise
                     </div>
                 </div>
             </div>
+
+            {/* Email Modal */}
+            {showEmailModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-gray-900">Get Credential</h3>
+                                <button
+                                    onClick={() => setShowEmailModal(false)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </div>
+                            
+                            {emailSent ? (
+                                <div className="text-center py-4">
+                                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                                    <h4 className="text-lg font-medium text-gray-900 mb-2">Email Sent!</h4>
+                                    <p className="text-gray-600">The credential has been sent to your email address.</p>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleEmailSubmit}>
+                                    <div className="mb-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Email Address
+                                        </label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="Enter your email address"
+                                            className="w-full px-4 py-3 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        />
+                                    </div>
+                                    <p className="text-sm text-gray-500 mb-6">
+                                        We&apos;ll send the verified credential document to this email address.
+                                    </p>
+                                    <div className="flex space-x-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowEmailModal(false)}
+                                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={sending || !email.trim()}
+                                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                        >
+                                            {sending ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    <span>Sending...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Mail className="h-4 w-4" />
+                                                    <span>Send Cred</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
