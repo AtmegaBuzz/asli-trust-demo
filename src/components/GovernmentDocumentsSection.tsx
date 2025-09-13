@@ -184,7 +184,7 @@ export default function GovernmentDocumentsSection({
                     <div><strong>Document Number:</strong> {doc.documentNumber}</div>
                     <div><strong>Issuing Authority:</strong> {doc.issuingAuthority}</div>
                     {doc.issueDate && (
-                      <div><strong>Issue Date:</strong> {doc.issueDate}</div>
+                      <div><strong>Attached Document:</strong> {doc.issueDate}</div>
                     )}
                   </div>
                   {doc.fileUrl && (
