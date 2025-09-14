@@ -303,13 +303,13 @@ export default function GigWorkerInfoPage({ params }: { params: Promise<{ id: st
                 </div>
 
                 {/* Footer Notice */}
-                <div className="mt-8 text-center">
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="mt-6 sm:mt-8 text-center">
+                    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
                         <div className="flex items-center justify-center space-x-2 mb-2">
-                            <Shield className="h-5 w-5 text-blue-600" />
-                            <span className="text-sm font-medium text-gray-700">Powered by Secure Verification</span>
+                            <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                            <span className="text-xs sm:text-sm font-medium text-gray-700">Powered by Secure Verification</span>
                         </div>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-500 max-w-2xl mx-auto">
                             This worker profile is verified and maintained through our secure platform.
                             Trust scores are updated regularly based on performance and feedback.
                         </p>

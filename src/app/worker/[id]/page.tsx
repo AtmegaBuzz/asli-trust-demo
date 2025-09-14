@@ -647,7 +647,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                                         <div>
                                             <span className="text-xs text-gray-500">Profile ID:</span>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xs font-mono bg-gray-100 p-1 rounded break-all">
+                                                <span className="text-xs font-mono text-black p-1 rounded break-all">
                                                     {worker.profileId.substring(0, 20)}...
                                                 </span>
                                                 <button
@@ -663,7 +663,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                                         <div>
                                             <span className="text-xs text-gray-500">Address:</span>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-xs font-mono bg-gray-100 p-1 rounded break-all">
+                                                <span className="text-xs font-mono bg-gray-100 text-black p-1 rounded break-all">
                                                     {worker.address.substring(0, 20)}...
                                                 </span>
                                                 <button
