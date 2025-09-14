@@ -152,7 +152,7 @@ export default function WorkerDetailPage({ params }: WorkerDetailPageProps) {
                 qrCode.append(workerQRRef.current)
             }
         })
-    }, [resolvedParams])
+    }, [resolvedParams.id, loading])
 
     useEffect(() => {
         const fetchWorkerData = async () => {
